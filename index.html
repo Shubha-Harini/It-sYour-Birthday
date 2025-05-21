@@ -1,0 +1,410 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Happy Birthday, My Love!</title>
+  <script defer src="https://cdn.tailwindcss.com"></script>
+  <script defer src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.2/dist/confetti.browser.min.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/react@18.2.0/umd/react.production.min.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/react-dom@18.2.0/umd/react-dom.production.min.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/@babel/standalone@7.23.8/babel.min.js"></script>
+  <script defer src="https://www.youtube.com/iframe_api"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Calligraffitti&display=swap" rel="stylesheet">
+  <style>
+    body {
+      background: linear-gradient(to bottom, #f9e8f3, #e0c7ff);
+      min-height: 100vh;
+      overflow-x: hidden;
+      opacity: 0;
+      animation: fadeIn 2s forwards;
+    }
+
+    @keyframes fadeIn {
+      0% { opacity: 0; }
+      100% { opacity: 1; }
+    }
+
+    .heart-bg {
+      position: absolute;
+      opacity: 0.15;
+      font-size: 10rem;
+      color: #ff6f91;
+      animation: float 10s infinite ease-in-out, glow 2s infinite alternate, spin 20s infinite linear;
+    }
+
+    @keyframes float {
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(-30px); }
+    }
+
+    @keyframes glow {
+      0% { text-shadow: 0 0 10px #ff6f91, 0 0 20px #ff6f91; }
+      50% { text-shadow: 0 0 20px #ff6f91, 0 0 30px #ff6f91; }
+      100% { text-shadow: 0 0 10px #ff6f91, 0 0 15px #ff6f91; }
+    }
+
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+
+    .message-box {
+      transition: transform 0.5s ease-out;
+      opacity: 0;
+      animation: fadeInMessage 1s forwards;
+    }
+
+    @keyframes fadeInMessage {
+      0% { opacity: 0; }
+      100% { opacity: 1; }
+    }
+
+    .pulse {
+      animation: pulseEffect 1.5s infinite;
+    }
+
+    @keyframes pulseEffect {
+      0% { transform: scale(1); }
+      50% { transform: scale(1.05); }
+      100% { transform: scale(1); }
+    }
+
+    .button:hover {
+      transform: translateY(-5px);
+      box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+      transition: transform 0.3s ease-out, box-shadow 0.3s ease-out;
+    }
+
+    .button:active {
+      transform: scale(0.95);
+      box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+    }
+
+    #love-note {
+      display: none;
+      max-width: 600px;
+      margin: 20px auto;
+      padding: 20px;
+      background: white;
+      border: 2px solid #ffb6c1;
+      border-radius: 10px;
+      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+      line-height: 1.5;
+      animation: fadeInLetter 1s forwards;
+    }
+
+    #love-note.show {
+      display: block;
+    }
+
+    @keyframes fadeInLetter {
+      0% { opacity: 0; transform: translateY(20px); }
+      100% { opacity: 1; transform: translateY(0); }
+    }
+
+    .letter-date {
+      text-align: right;
+      font-size: 1rem;
+      color: #333;
+      margin-bottom: 10px;
+    }
+
+    .letter-title {
+      color: #ff6f91;
+      font-size: 2.5rem;
+      font-weight: bold;
+      text-align: center;
+    }
+
+    .letter-subtitle {
+      color: #ff6f91;
+      font-size: 1.5rem;
+      text-align: center;
+      margin-bottom: 20px;
+    }
+
+    .letter-body {
+      font-size: 1.1rem;
+      color: #333;
+      margin-bottom: 20px;
+    }
+
+    .letter-signature {
+      font-family: 'Calligraffitti', cursive;
+      font-size: 1.5rem;
+      color: #333;
+      margin-top: 10px;
+    }
+
+    .letter-closing {
+      color: #ff6f91;
+      font-size: 1.5rem;
+      text-align: center;
+      margin-top: 10px;
+    }
+
+    #player {
+      width: 0;
+      height: 0;
+      visibility: hidden; /* Hide video, keep audio */
+    }
+  </style>
+</head>
+<body class="flex items-center justify-center font-sans text-gray-800">
+  <div class="heart-bg" style="top: 10%; left: 5%;">❤️</div>
+  <div class="heart-bg" style="top: 30%; right: 10%;">💖</div>
+  <div class="heart-bg" style="bottom: 20%; left: 20%;">💕</div>
+  
+
+  <div id="root" class="relative z-10"></div>
+  <div id="player"></div>
+
+  <script type="text/babel">
+    const { useState, useEffect } = React;
+
+    const reasons = [
+      "Your heart knows only love, and it’s the purest thing I’ve ever known. ❤️",
+      "You’re my precious baby, forever cherished in my heart. 👶",
+      "Your strength as a woman inspires me every day. 💪",
+      "You’re my queen, ruling my heart with grace and love. 👑",
+      "I’m captivated by your beautiful eyes that see right into my soul. 👀",
+      "You’ve transformed me into a better man, and I’m so grateful. 🌟",
+      "You understand me like no one else ever could. 🤝",
+      "You care for me with a tenderness that feels like home. 🥰",
+      "Even your anger is adorable, showing how much you care. 😣",
+      "You embrace my culture, making me proud to call you mine. 🕉️",
+      "Your devotion to faith shines brightly in everything you do. 🙏",
+      "Your dedication to those you love is truly inspiring. 💼",
+      "You deserve all my love, today and always. 💖",
+      "With you, I feel complete, like I’ve found my missing piece. 🧩",
+      "Your kindness touches everyone around you, especially me. 😊",
+      "I trust you completely, knowing you’ll always have my back. 🤲",
+      "Your golden heart is a treasure in this world. 💛",
+      "You’re a rare, beautiful flower in a challenging modern world. 🌸",
+      "I dream of you as my wife, building our life together. 💍",
+      "I love how you think about our future family with such hope. 👨‍👩‍👧",
+      "You’re the only one, after my mom, who cries for me with such love. 😢",
+      "Your care for me makes every day brighter and easier. 🩺",
+      "Your forward-thinking vision inspires our shared dreams. 🚀",
+      "You’re the only one who trusts me blindly, and I’ll never let you down. 🤍"
+    ];
+
+    let player = null;
+    let hasPlayed = false;
+
+    const App = () => {
+      const [currentReason, setCurrentReason] = useState("");
+      const [reasonIndex, setReasonIndex] = useState(0);
+      const [name, setName] = useState("");
+      const [soundEnabled, setSoundEnabled] = useState(true);
+      const [showLetter, setShowLetter] = useState(false);
+      const [isMuted, setIsMuted] = useState(true);
+
+      const playSound = () => {
+        if (soundEnabled && !hasPlayed && player) {
+          player.playVideo();
+          if (isMuted) {
+            player.unMute();
+            setIsMuted(false);
+          }
+          hasPlayed = true;
+        }
+      };
+
+      const toggleMute = () => {
+        if (player) {
+          if (isMuted) {
+            player.unMute();
+            setIsMuted(false);
+          } else {
+            player.mute();
+            setIsMuted(true);
+          }
+        }
+      };
+
+      const showNewReason = () => {
+        const newReason = reasons[reasonIndex % reasons.length];
+        setCurrentReason(newReason);
+        setReasonIndex(reasonIndex + 1);
+
+        gsap.fromTo(
+          "#reason-text",
+          { opacity: 0, y: 50, scale: 0.8 },
+          { opacity: 1, y: 0, scale: 1, duration: 1, ease: "back.out(1.7)" }
+        );
+
+        confetti({
+          particleCount: 100,
+          spread: 70,
+          origin: { y: 0.6 },
+          colors: ["#ff6f91", "#ff9ab8", "#e0c7ff"],
+        });
+
+        playSound();
+      };
+
+      const toggleLetter = () => {
+        setShowLetter(!showLetter);
+        if (!showLetter) {
+          gsap.fromTo(
+            "#love-note",
+            { opacity: 0, y: 20 },
+            { opacity: 1, y: 0, duration: 1, ease: "back.out(1.7)" }
+          );
+        }
+      };
+
+      useEffect(() => {
+        gsap.fromTo(
+          ".title",
+          { opacity: 0, scale: 0.5 },
+          { opacity: 1, scale: 1, duration: 1.5, ease: "elastic.out(1, 0.5)" }
+        );
+        gsap.fromTo(
+          ".button",
+          { opacity: 0, y: 100 },
+          { opacity: 1, y: 0, duration: 1, ease: "power3.out", delay: 0.5 }
+        );
+        setTimeout(() => {
+          gsap.to(".gift-button", {
+            x: 10,
+            repeat: 3,
+            yoyo: true,
+            duration: 0.1,
+            ease: "power1.inOut",
+          });
+        }, 5000);
+
+        const interval = setInterval(() => {
+          confetti({
+            particleCount: 50,
+            spread: 100,
+            origin: { y: 0.4 },
+            colors: ["#ff6f91", "#ff9ab8", "#e0c7ff"],
+          });
+        }, 500);
+        setTimeout(() => clearInterval(interval), 3000);
+
+        // Attempt auto-play on page load
+        if (soundEnabled && !hasPlayed && player) {
+          player.playVideo();
+          hasPlayed = true;
+        }
+      }, []);
+
+      return (
+        <div className="max-w-lg mx-4 text-center py-10">
+          <h1 className="title text-4xl md:text-5xl font-bold text-pink-600 mb-6 pulse">
+            Happy Birthday🎉 <br/> <br/>{name || "My Dear Love"}!💕
+          </h1>
+          <p className="text-lg md:text-xl text-gray-700 mb-8">
+            For so long, you’ve been asking me the reason behind my love for you💖. Here are some. 💕 Click the button below to find your answer! 😊
+          </p>
+          <button
+            onClick={showNewReason}
+            className="bg-pink-500 text-white px-6 py-3 rounded-full text-lg font-semibold hover:bg-pink-600 transition duration-300 button"
+            aria-label="Show a new reason I love you"
+          >
+            Show Me a Reason
+          </button>
+          <p className="mt-4 text-gray-600">
+            Reason {reasonIndex} of {reasons.length}
+          </p>
+          {currentReason && (
+            <div
+              id="reason-text"
+              className="mt-8 p-6 bg-white rounded-lg shadow-lg text-lg md:text-xl text-gray-800 message-box"
+            >
+              Reason #{reasonIndex}: {currentReason}
+            </div>
+          )}
+          <div className="mt-10">
+            <button
+              onClick={toggleLetter}
+              className="inline-block bg-purple-500 text-white px-6 py-3 rounded-full text-lg font-semibold hover:bg-purple-600 transition duration-300 gift-button"
+              aria-label="View your love note"
+            >
+              {showLetter ? "Hide Your Love Note 💌" : "View Your Love Note 💌"}
+            </button>
+          </div>
+          <div id="love-note" className={showLetter ? "show" : ""}>
+            <div className="letter-date">May 21, 2025</div>
+            <h2 className="letter-title">Happiest 21st Birthday, <br/>
+              My Harini Maa! 🎉🎂</h2>
+            <h3 className="letter-subtitle">From My Heart to Yours ❤️</h3>
+            <div className="letter-body">
+              <p>My Dearest Harini Ma,</p>
+              <p>
+                This is your third birthday celebrating together, and it’s so special to us 🎈, even though you’re far away. My heart aches that we can’t celebrate today, but I’m holding onto the dream of the day we’ll share your birthday side by side 🗓️⏰. I’m waiting for that moment, and I know it’s coming soon.
+              </p>
+              <p>
+                You’ve changed me in ways I never imagined 🌟. You’ve made me a better person, filling my heart with hope for our future 🌈. I picture us building a beautiful life together as a loving couple 💑, always there for each other. We’ll honor our parents, being the son and daughter they’re proud of 🙏, and we’ll bring joy to our families as a respectful son-in-law and daughter-in-law 👨‍👩‍👧‍👦.
+              </p>
+              <p>
+                I dream of us as parents one day—me as a caring father 🧑‍🍼, you as a nurturing mother 👶, raising our children with all the love in our hearts ❤️. We’ll spend countless moments together, laughing 😊 and growing closer, our love deepening until our last breath 💞. I promise to stand by you through every challenge 💪, supporting you as you support me 🤝.
+              </p>
+              <p>
+                We’ll create a strong, happy family 👨‍👩‍👧, facing life’s journey hand in hand 🤲. I’ll never leave your side, my love 💍. Our home will be filled with health 🩺, wealth 💰, prosperity 🌟, and respect from those around us. I love you more than words can express 💖, and I’m counting the days we’re together.
+              </p>
+              <p>
+                Happiest 21st birthday, my dear papa 🎉. May this year bring you all the joy and love you deserve 😊.
+              </p>
+              <p>Yours forever,<br />Your Lovable Husband,<br /><span className="letter-title">Santhosh M 🥰</span></p>
+            </div>
+            <div className="letter-closing">With all my love, today and always 🤍.</div>
+          </div>
+          <div className="mt-4 flex items-center justify-center space-x-4">
+            <label className="flex items-center text-gray-600">
+              <input
+                type="checkbox"
+                checked={soundEnabled}
+                onChange={() => setSoundEnabled(!soundEnabled)}
+              />
+              <span className="ml-2">Play sound effects</span>
+            </label>
+            <button
+              onClick={toggleMute}
+              className="bg-blue-500 text-white px-4 py-2 rounded-full text-sm font-semibold hover:bg-blue-600 transition duration-300"
+              aria-label={isMuted ? "Unmute audio" : "Mute audio"}
+            >
+              {isMuted ? "Unmute" : "Mute"}
+            </button>
+          </div>
+          <p className="mt-6 text-sm text-gray-600">
+            Made with ❤️ by Santhosh M
+          </p>
+        </div>
+      );
+    };
+
+    function onYouTubeIframeAPIReady() {
+      player = new YT.Player('player', {
+        videoId: 'QfOGP3Qk12E',
+        playerVars: {
+          'autoplay': 0,
+          'controls': 0,
+          'showinfo': 0,
+          'rel': 0,
+          'mute': 1 // Start muted to comply with auto-play policies
+        },
+        events: {
+          'onReady': (event) => {
+            if (soundEnabled && !hasPlayed) {
+              event.target.playVideo();
+              hasPlayed = true;
+            }
+          },
+          'onError': (event) => {
+            console.error('YouTube Player Error:', event.data);
+          }
+        }
+      });
+    }
+
+    ReactDOM.render(<App />, document.getElementById("root"));
+  </script>
+</body>
+</html>
